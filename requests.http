@@ -1,0 +1,72 @@
+### Примеры запросов (IntelliJ IDEA HTTP Client / VS Code REST Client)
+@host = http://localhost:8080
+
+### Регистрация покупателя
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{"username": "ivan", "email": "ivan@example.com", "password": "secret123", "fullName": "Иван Петров"}
+
+### Вход (скопируйте token из ответа)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{"username": "ivan", "password": "secret123"}
+
+### Вход администратора
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{"username": "admin", "password": "admin123"}
+
+### Кто я
+GET {{host}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Каталог (публично): поиск, фильтр по цене, сортировка, пагинация
+GET {{host}}/api/products?q=phone&minPrice=10000&maxPrice=200000&sort=price,desc&page=0&size=5
+
+### Категории
+GET {{host}}/api/categories
+
+### Добавить адрес
+POST {{host}}/api/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"label": "Дом", "city": "Москва", "street": "Тверская, 1", "zipCode": "101000"}
+
+### Оформить заказ
+POST {{host}}/api/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"addressId": 1, "items": [{"productId": 3, "quantity": 1}, {"productId": 6, "quantity": 2}]}
+
+### Оплатить заказ
+POST {{host}}/api/payments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"orderId": 1, "method": "CARD"}
+
+### Менеджер: отправить заказ
+PATCH {{host}}/api/orders/1/status
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{"status": "SHIPPED"}
+
+### Отзыв о товаре
+POST {{host}}/api/products/3/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"rating": 5, "comment": "Отличный телефон"}
+
+### Health (публично) и метрики (ADMIN)
+GET {{host}}/actuator/health
+
+###
+GET {{host}}/actuator/metrics/markethub.orders.created
+Authorization: Bearer {{adminToken}}
