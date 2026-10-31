@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MarketHub — демо</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1d2330; --muted: #6b7280; --line: #e3e6eb;
+    --accent: #2f6fde; --accent-soft: #e8f0fd; --ok: #1f8a4c; --ok-soft: #e3f4ea;
+    --warn: #b45309; --warn-soft: #fdf1e1; --err: #c62828; --err-soft: #fdeaea;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); }
+  header { background: var(--card); border-bottom: 1px solid var(--line); padding: 12px 20px;
+           display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 20px; margin: 0; }
+  header h1 span { color: var(--accent); }
+  #who { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gap: 20px;
+         grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  section h2 { font-size: 16px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .hint { color: var(--muted); font-size: 13px; margin: -6px 0 12px; }
+  .full { grid-column: 1 / -1; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
+           border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { color: var(--err); }
+  button:disabled { opacity: .5; cursor: default; }
+  input, select { font: inherit; border: 1px solid var(--line); border-radius: 7px; padding: 6px 10px; background: #fff; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .product { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .product .name { font-weight: 600; }
+  .product .desc { color: var(--muted); font-size: 13px; flex: 1; }
+  .price { font-weight: 700; font-size: 17px; }
+  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .badge.NEW { background: var(--accent-soft); color: var(--accent); }
+  .badge.PAID, .badge.DELIVERED, .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.SHIPPED { background: var(--warn-soft); color: var(--warn); }
+  .badge.CANCELLED { background: var(--err-soft); color: var(--err); }
+  .order { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+  .order .items { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
+  .empty { color: var(--muted); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  #log { font: 12px/1.4 ui-monospace, Menlo, monospace; max-height: 360px; overflow: auto; }
+  .log-entry { border-bottom: 1px solid var(--line); padding: 6px 0; }
+  .log-entry summary { cursor: pointer; }
+  .log-entry pre { white-space: pre-wrap; word-break: break-word; background: var(--bg); padding: 8px; border-radius: 6px; margin: 6px 0 0; }
+  .s2 { color: var(--ok); font-weight: 700; } .s4 { color: var(--warn); font-weight: 700; } .s5 { color: var(--err); font-weight: 700; }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 16px;
+           border-radius: 8px; color: #fff; display: none; max-width: 90vw; z-index: 10; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Market<span>Hub</span></h1>
+  <div id="who"></div>
+</header>
+
+<main>
+  <section id="login-box" class="full">
+    <h2>Вход</h2>
+    <p class="hint">Быстрый вход для демонстрации — по одной кнопке на каждую роль. Или войдите своим логином.</p>
+    <div class="row">
+      <button class="primary" onclick="quickCustomer()">Новый покупатель</button>
+      <button onclick="login('manager', 'manager123')">Войти как менеджер</button>
+      <button onclick="login('admin', 'admin123')">Войти как администратор</button>
+      <span class="empty">или</span>
+      <input id="lg-user" placeholder="логин" size="12">
+      <input id="lg-pass" placeholder="пароль" type="password" size="12">
+      <button onclick="login(val('lg-user'), val('lg-pass'))">Войти</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Каталог</h2>
+    <div class="row" style="margin-bottom:12px">
+      <input id="q" placeholder="Поиск по названию" oninput="debouncedLoad()">
+      <select id="cat" onchange="loadProducts()"><option value="">Все категории</option></select>
+      <select id="sort" onchange="loadProducts()">
+        <option value="id">По порядку</option>
+        <option value="price,asc">Сначала дешёвые</option>
+        <option value="price,desc">Сначала дорогие</option>
+      </select>
+    </div>
+    <div id="products" class="grid"></div>
+  </section>
+
+  <section>
+    <h2>Корзина</h2>
+    <div id="cart"></div>
+    <div id="checkout" class="hidden" style="margin-top:12px">
+      <p class="hint">Адрес доставки</p>
+      <div class="row">
+        <input id="city" value="Москва" placeholder="Город" size="10">
+        <input id="street" value="Тверская, 1" placeholder="Улица, дом" size="14">
+        <input id="zip" value="101000" placeholder="Индекс" size="7">
+      </div>
+      <button class="primary" style="margin-top:10px" onclick="checkout()">Оформить заказ</button>
+    </div>
+  </section>
+
+  <section class="full" id="orders-box">
+    <h2>Заказы <span id="orders-scope" class="badge"></span></h2>
+    <p class="hint" id="orders-hint"></p>
+    <div id="orders"></div>
+  </section>
+
+  <section id="manager-box" class="full hidden">
+    <h2>Панель менеджера: новый товар</h2>
+    <div class="row">
+      <input id="np-name" placeholder="Название" size="16">
+      <input id="np-price" placeholder="Цена" type="number" min="1" size="8">
+      <input id="np-stock" placeholder="Остаток" type="number" min="0" size="6">
+      <select id="np-cat"></select>
+      <button class="primary" onclick="createProduct()">Добавить товар</button>
+    </div>
+  </section>
+
+  <section id="admin-box" class="full hidden">
+    <h2>Панель администратора: пользователи</h2>
+    <div id="users"></div>
+  </section>
+
+  <section class="full">
+    <h2>Журнал запросов к серверу <button onclick="clearLog()" style="margin-left:auto">Очистить</button></h2>
+    <p class="hint">Страница — это просто клиент. Всё, что вы делаете, превращается в REST-запросы к Spring Boot. Нажмите на строку, чтобы увидеть тело запроса и ответ сервера.</p>
+    <div id="log"></div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const state = { token: null, user: null, cart: new Map(), products: [], addressId: null };
+const ORDER_FLOW = { NEW: null, PAID: 'SHIPPED', SHIPPED: 'DELIVERED' };
+const STATUS_RU = { NEW: 'Новый', PAID: 'Оплачен', SHIPPED: 'Отправлен', DELIVERED: 'Доставлен', CANCELLED: 'Отменён' };
+
+const $ = id => document.getElementById(id);
+const val = id => $(id).value.trim();
+const money = n => Number(n).toLocaleString('ru-RU') + ' ₽';
+const isStaff = () => !!state.user && state.user.roles.some(r => r === 'ADMIN' || r === 'MANAGER');
+const isAdmin = () => !!state.user && state.user.roles.includes('ADMIN');
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+    else if (k === 'class') node.className = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of children.flat()) if (c != null) node.append(c instanceof Node ? c : String(c));
+  return node;
+}
+
+function toast(text, ok = true) {
+  const t = $('toast');
+  t.textContent = text;
+  t.style.background = ok ? 'var(--ok)' : 'var(--err)';
+  t.style.display = 'block';
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.style.display = 'none', 3500);
+}
+
+/** Все обращения к серверу идут через эту функцию и попадают в журнал. */
+async function api(method, url, body) {
+  const headers = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const started = performance.now();
+  let res, data = null;
+  try {
+    res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  } catch (e) {
+    addLog(method, url, 0, body, 'Сервер недоступен', 0);
+    toast('Сервер недоступен — запущено ли приложение?', false);
+    throw e;
+  }
+  const text = await res.text();
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  addLog(method, url, res.status, body, data, Math.round(performance.now() - started));
+  if (!res.ok) {
+    const msg = (data && (data.detail || data.title)) || ('Ошибка ' + res.status);
+    toast(res.status + ': ' + msg, false);
+    const err = new Error(msg); err.status = res.status; throw err;
+  }
+  return data;
+}
+
+function addLog(method, url, status, reqBody, resBody, ms) {
+  const cls = status >= 500 || status === 0 ? 's5' : status >= 400 ? 's4' : 's2';
+  const shownUrl = url.replace(location.origin, '');
+  const entry = el('details', { class: 'log-entry' },
+    el('summary', {}, new Date().toLocaleTimeString('ru-RU') + '  ' + method + ' ' + shownUrl + '  → ',
+      el('span', { class: cls }, status || 'нет ответа'), '  (' + ms + ' мс)'),
+    reqBody !== undefined ? el('pre', {}, 'Запрос:\n' + JSON.stringify(reqBody, null, 2)) : null,
+    el('pre', {}, 'Ответ:\n' + (typeof resBody === 'string' ? resBody : JSON.stringify(resBody, null, 2))));
+  $('log').prepend(entry);
+}
+
+function clearLog() { $('log').replaceChildren(); }
+
+// ---------- Вход ----------
+async function login(username, password) {
+  if (!username || !password) { toast('Введите логин и пароль', false); return; }
+  const r = await api('POST', '/api/auth/login', { username, password });
+  setSession(r);
+}
+
+async function quickCustomer() {
+  const n = Math.floor(1000 + Math.random() * 9000);
+  const r = await api('POST', '/api/auth/register', {
+    username: 'buyer' + n, email: 'buyer' + n + '@example.com', password: 'secret123', fullName: 'Покупатель ' + n });
+  setSession(r);
+}
+
+function setSession(r) {
+  state.token = r.token;
+  state.user = r.user;
+  state.addressId = null;
+  toast('Вы вошли как ' + r.user.username + ' (' + r.user.roles.join(', ') + ')');
+  renderAll();
+}
+
+function logout() {
+  state.token = null; state.user = null; state.cart.clear(); state.addressId = null;
+  renderAll();
+}
+
+function renderWho() {
+  const who = $('who');
+  who.replaceChildren();
+  if (state.user) {
+    who.append(el('span', {}, '👤 ', el('b', {}, state.user.username)),
+      ...state.user.roles.map(r => el('span', { class: 'badge' }, r)),
+      el('button', { onclick: logout }, 'Выйти'));
+  } else {
+    who.append(el('span', { class: 'empty' }, 'Вы не вошли — каталог доступен всем'));
+  }
+  $('login-box').classList.toggle('hidden', !!state.user);
+  $('manager-box').classList.toggle('hidden', !isStaff());
+  $('admin-box').classList.toggle('hidden', !isAdmin());
+}
+
+// ---------- Каталог ----------
+async function loadCategories() {
+  const cats = await api('GET', '/api/categories');
+  for (const sel of [$('cat'), $('np-cat')]) {
+    const keepFirst = sel.id === 'cat' ? sel.firstElementChild : null;
+    sel.replaceChildren(...(keepFirst ? [keepFirst] : []), ...cats.map(c => el('option', { value: c.id }, c.name)));
+  }
+}
+
+let loadTimer;
+function debouncedLoad() { clearTimeout(loadTimer); loadTimer = setTimeout(loadProducts, 300); }
+
+async function loadProducts() {
+  const p = new URLSearchParams({ size: '50', sort: $('sort').value });
+  if (val('q')) p.set('q', val('q'));
+  if ($('cat').value) p.set('categoryId', $('cat').value);
+  const page = await api('GET', '/api/products?' + p);
+  state.products = page.content;
+  renderProducts();
+}
+
+function renderProducts() {
+  const box = $('products');
+  box.replaceChildren();
+  if (!state.products.length) { box.append(el('div', { class: 'empty' }, 'Ничего не найдено')); return; }
+  for (const p of state.products) {
+    const rating = p.averageRating ? '★ ' + p.averageRating + ' (' + p.reviewCount + ')' : 'Нет отзывов';
+    box.append(el('div', { class: 'product' },
+      el('div', { class: 'name' }, p.name),
+      el('div', {}, el('span', { class: 'badge' }, p.categoryName), ' ', el('span', { class: 'empty' }, rating)),
+      el('div', { class: 'desc' }, p.description || ''),
+      el('div', { class: 'price' }, money(p.price)),
+      el('div', { class: 'empty' }, 'На складе: ' + p.stock + ' шт.'),
+      el('div', { class: 'row' },
+        el('button', { class: 'primary', disabled: p.stock === 0 ? '' : null, onclick: () => addToCart(p) }, 'В корзину'),
+        el('button', { onclick: () => showReviews(p) }, 'Отзывы'),
+        isStaff() ? el('button', { class: 'danger', onclick: () => deleteProduct(p) }, 'Удалить') : null)));
+  }
+}
+
+async function showReviews(p) {
+  const page = await api('GET', '/api/products/' + p.id + '/reviews');
+  if (!page.content.length) { toast('У товара «' + p.name + '» пока нет отзывов'); return; }
+  const lines = page.content.map(r => '★' + r.rating + ' ' + r.authorUsername
+    + (r.verifiedPurchase ? ' (купил товар)' : '') + ': ' + (r.comment || ''));
+  alert('Отзывы о «' + p.name + '»:\n\n' + lines.join('\n'));
+}
+
+// ---------- Корзина и заказ ----------
+function addToCart(p) {
+  if (!state.user) { toast('Сначала войдите — например, кнопкой «Новый покупатель»', false); return; }
+  const cur = state.cart.get(p.id) || { product: p, qty: 0 };
+  cur.qty += 1;
+  state.cart.set(p.id, cur);
+  renderCart();
+}
+
+function renderCart() {
+  const box = $('cart');
+  box.replaceChildren();
+  if (!state.cart.size) {
+    box.append(el('div', { class: 'empty' }, state.user ? 'Корзина пуста — добавьте товары из каталога' : 'Войдите, чтобы делать покупки'));
+    $('checkout').classList.add('hidden');
+    return;
+  }
+  let total = 0;
+  const rows = [];
+  for (const { product, qty } of state.cart.values()) {
+    total += product.price * qty;
+    rows.push(el('tr', {}, el('td', {}, product.name), el('td', {}, '× ' + qty),
+      el('td', {}, money(product.price * qty)),
+      el('td', {}, el('button', { onclick: () => { state.cart.delete(product.id); renderCart(); } }, '✕'))));
+  }
+  box.append(el('table', {}, ...rows), el('p', {}, el('b', {}, 'Итого: ' + money(total))));
+  $('checkout').classList.remove('hidden');
+}
+
+async function checkout() {
+  if (!state.addressId) {
+    const addr = await api('POST', '/api/addresses',
+      { label: 'Дом', city: val('city'), street: val('street'), zipCode: val('zip') });
+    state.addressId = addr.id;
+  }
+  const items = [...state.cart.values()].map(c => ({ productId: c.product.id, quantity: c.qty }));
+  const order = await api('POST', '/api/orders', { addressId: state.addressId, items });
+  state.cart.clear();
+  toast('Заказ №' + order.id + ' оформлен на ' + money(order.totalAmount) + '. Теперь его можно оплатить.');
+  renderCart();
+  await Promise.all([loadOrders(), loadProducts()]);
+}
+
+// ---------- Заказы ----------
+async function loadOrders() {
+  const box = $('orders');
+  box.replaceChildren();
+  if (!state.user) {
+    $('orders-scope').textContent = '';
+    $('orders-hint').textContent = '';
+    box.append(el('div', { class: 'empty' }, 'Войдите, чтобы увидеть заказы'));
+    return;
+  }
+  $('orders-scope').textContent = isStaff() ? 'все заказы магазина' : 'только мои';
+  $('orders-hint').textContent = isStaff()
+    ? 'Менеджер видит заказы всех покупателей и ведёт их по статусам: Оплачен → Отправлен → Доставлен.'
+    : 'Покупатель видит только свои заказы. Жизненный цикл: Новый → Оплачен → Отправлен → Доставлен.';
+  const page = await api('GET', '/api/orders?size=50');
+  if (!page.content.length) { box.append(el('div', { class: 'empty' }, 'Заказов пока нет')); return; }
+  for (const o of page.content) box.append(renderOrder(o));
+}
+
+function renderOrder(o) {
+  const mine = o.userId === state.user.id;
+  const actions = el('div', { class: 'row' });
+  if (mine && o.status === 'NEW') {
+    actions.append(el('button', { class: 'primary', onclick: () => pay(o, 'CARD') }, 'Оплатить картой'),
+      el('button', { onclick: () => pay(o, 'SBP') }, 'Оплатить по СБП'));
+  }
+  if ((mine || isStaff()) && (o.status === 'NEW' || o.status === 'PAID')) {
+    actions.append(el('button', { class: 'danger', onclick: () => cancel(o) }, 'Отменить'));
+  }
+  if (isStaff() && ORDER_FLOW[o.status]) {
+    const next = ORDER_FLOW[o.status];
+    actions.append(el('button', { class: 'primary', onclick: () => setStatus(o, next) }, '→ ' + STATUS_RU[next]));
+  }
+  if (isStaff() && o.status === 'PAID' && o.paymentId) {
+    actions.append(el('button', { onclick: () => refund(o) }, 'Вернуть деньги'));
+  }
+  if (mine && o.status === 'DELIVERED') {
+    for (const it of o.items) {
+      actions.append(el('button', { onclick: () => review(it) }, 'Отзыв: ' + it.productName));
+    }
+  }
+  return el('div', { class: 'order' },
+    el('div', { class: 'row' }, el('b', {}, 'Заказ №' + o.id), el('span', { class: 'badge ' + o.status }, STATUS_RU[o.status]),
+      el('span', { class: 'empty' }, 'покупатель ' + o.username), el('span', { style: 'margin-left:auto' }, el('b', {}, money(o.totalAmount)))),
+    el('div', { class: 'items' }, o.items.map(i => i.productName + ' × ' + i.quantity).join(', ')),
+    actions);
+}
+
+async function afterOrderChange(message) {
+  toast(message);
+  await Promise.all([loadOrders(), loadProducts()]);
+}
+
+async function pay(o, method) {
+  await api('POST', '/api/payments', { orderId: o.id, method });
+  await afterOrderChange('Заказ №' + o.id + ' оплачен');
+}
+
+async function cancel(o) {
+  await api('POST', '/api/orders/' + o.id + '/cancel');
+  await afterOrderChange('Заказ №' + o.id + ' отменён, товары вернулись на склад');
+}
+
+async function setStatus(o, status) {
+  await api('PATCH', '/api/orders/' + o.id + '/status', { status });
+  await afterOrderChange('Заказ №' + o.id + ': ' + STATUS_RU[status]);
+}
+
+async function refund(o) {
+  await api('POST', '/api/payments/' + o.paymentId + '/refund');
+  await afterOrderChange('Деньги по заказу №' + o.id + ' возвращены');
+}
+
+async function review(item) {
+  const rating = Number(prompt('Оценка товара «' + item.productName + '» от 1 до 5', '5'));
+  if (!rating) return;
+  const comment = prompt('Комментарий', 'Всё отлично!') || '';
+  const r = await api('POST', '/api/products/' + item.productId + '/reviews', { rating, comment });
+  await afterOrderChange(r.verifiedPurchase ? 'Отзыв сохранён с отметкой «подтверждённая покупка»' : 'Отзыв сохранён');
+}
+
+// ---------- Менеджер и администратор ----------
+async function createProduct() {
+  const body = { name: val('np-name'), price: Number(val('np-price')), stock: Number(val('np-stock')),
+                 categoryId: Number($('np-cat').value), description: 'Добавлено через панель менеджера' };
+  const p = await api('POST', '/api/products', body);
+  toast('Товар «' + p.name + '» добавлен');
+  for (const id of ['np-name', 'np-price', 'np-stock']) $(id).value = '';
+  await loadProducts();
+}
+
+async function deleteProduct(p) {
+  if (!confirm('Удалить «' + p.name + '»?')) return;
+  const r = await api('DELETE', '/api/products/' + p.id);
+  toast(r ? 'Товар уже есть в заказах, поэтому он снят с продажи, а не удалён' : 'Товар удалён');
+  await loadProducts();
+}
+
+async function loadUsers() {
+  const box = $('users');
+  box.replaceChildren();
+  if (!isAdmin()) return;
+  const page = await api('GET', '/api/users?size=50');
+  box.append(el('table', {},
+    el('tr', {}, ...['ID', 'Логин', 'Email', 'Роли', 'Активен'].map(h => el('th', {}, h))),
+    ...page.content.map(u => el('tr', {}, el('td', {}, u.id), el('td', {}, u.username), el('td', {}, u.email),
+      el('td', {}, u.roles.join(', ')), el('td', {}, u.enabled ? 'да' : 'нет')))));
+}
+
+async function renderAll() {
+  renderWho();
+  renderCart();
+  await Promise.allSettled([loadProducts(), loadOrders(), loadUsers()]);
+}
+
+(async () => {
+  try { await loadCategories(); } catch { /* сервер недоступен — сообщение уже показано */ }
+  await renderAll();
+})();
+</script>
+</body>
+</html>
